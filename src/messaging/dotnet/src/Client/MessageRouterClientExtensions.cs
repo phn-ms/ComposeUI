@@ -52,3 +52,5 @@ public static class MessageRouterClientExtensions
         private readonly string _topic;
     }
 }
+
+// Test comment /2 /3
