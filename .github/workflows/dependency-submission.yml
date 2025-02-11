@@ -3,7 +3,7 @@ name: Dependency Submission
 on:
   workflow_dispatch:
   schedule: 
-    - cron: 0 19 * * * #7 PM ET
+#    - cron: 0 19 * * * #7 PM ET
   
 
 permissions: 
