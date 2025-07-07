@@ -55,6 +55,6 @@ internal class PrivateChannel : Channel
             await tcs.Task;
         }
 
-        subscription.Dispose();
+        await subscription.DisposeAsync();
     }
 }

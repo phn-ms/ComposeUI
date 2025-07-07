@@ -13,6 +13,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+//using Microsoft.Bcl.AsyncInterfaces;
 
 namespace MorganStanley.ComposeUI.MessagingAdapter.Abstractions;
 
@@ -67,7 +68,7 @@ public interface IComposeUIMessaging
     /// <param name="subscriber"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    ValueTask<IDisposable> SubscribeAsync(string topic, Func<string, ValueTask> subscriber, CancellationToken cancellationToken = default);
+    ValueTask<IAsyncDisposable> SubscribeAsync(string topic, Func<string, ValueTask> subscriber, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes a service registration.

@@ -113,7 +113,7 @@ namespace MorganStanley.ComposeUI.MessagingAdapter;
     /// A <see cref="ValueTask{IDisposable}"/> representing the asynchronous subscription operation.
     /// The result contains an <see cref="IDisposable"/> that can be used to unsubscribe.
     /// </returns>
-    public async ValueTask<IDisposable> SubscribeAsync(
+    public async ValueTask<IAsyncDisposable> SubscribeAsync(
         string topic,
         Func<string, ValueTask> subscriber,
         CancellationToken cancellationToken = default)
@@ -126,26 +126,27 @@ namespace MorganStanley.ComposeUI.MessagingAdapter;
                 return subscriber(message);
             });
             var asyncDisposable = await _messagingService.SubscribeAsync(topic, asyncSubscriber, cancellationToken);
-            return new AsyncDisposableWrapper(asyncDisposable);
+            //return new AsyncDisposableWrapper(asyncDisposable);
+            return asyncDisposable;
         });
     }
 
-    /// <summary>
-    /// Wraps an <see cref="IAsyncDisposable"/> instance and exposes it as a synchronous <see cref="IDisposable"/>.
-    /// Ensures that asynchronous disposal is performed synchronously when <see cref="Dispose"/> is called.
-    /// </summary>
-    private sealed class AsyncDisposableWrapper(IAsyncDisposable asyncDisposable) : IDisposable
-    {
-        private readonly IAsyncDisposable _asyncDisposable = asyncDisposable;
+    ///// <summary>
+    ///// Wraps an <see cref="IAsyncDisposable"/> instance and exposes it as a synchronous <see cref="IDisposable"/>.
+    ///// Ensures that asynchronous disposal is performed synchronously when <see cref="Dispose"/> is called.
+    ///// </summary>
+    //private sealed class AsyncDisposableWrapper(IAsyncDisposable asyncDisposable) : IDisposable
+    //{
+    //    private readonly IAsyncDisposable _asyncDisposable = asyncDisposable;
 
-        /// <summary>
-        /// Disposes the underlying <see cref="IAsyncDisposable"/> instance synchronously.
-        /// </summary>
-        public void Dispose()
-        {
-            _asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
-        }
-    }
+    //    /// <summary>
+    //    /// Disposes the underlying <see cref="IAsyncDisposable"/> instance synchronously.
+    //    /// </summary>
+    //    public void Dispose()
+    //    {
+    //        _asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
+    //    }
+    //}
 
     /// <summary>
     /// Unregisters a previously registered service endpoint from the messaging service.

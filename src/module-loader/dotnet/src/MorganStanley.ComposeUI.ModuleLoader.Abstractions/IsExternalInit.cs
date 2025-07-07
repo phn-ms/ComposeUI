@@ -10,15 +10,11 @@
 // or implied. See the License for the specific language governing permissions
 // and limitations under the License.
 
-using Finos.Fdc3;
+namespace System.Runtime.CompilerServices;
 
-namespace MorganStanley.ComposeUI.Fdc3.DesktopAgent.Protocol;
-
-public class AppIntent : IAppIntent
-{
-    public IntentMetadata Intent { get; set; }
-    IIntentMetadata IAppIntent.Intent => Intent;
-
-    public IEnumerable<AppMetadata> Apps { get; set; }
-    IEnumerable<IAppMetadata> IAppIntent.Apps => Apps;
-}
+/// <summary>
+/// Reserved for compiler use to support C# 9.0 init-only properties and records.
+/// Not intended to be used directly in code.
+/// </summary>
+internal sealed class IsExternalInit
+{ }

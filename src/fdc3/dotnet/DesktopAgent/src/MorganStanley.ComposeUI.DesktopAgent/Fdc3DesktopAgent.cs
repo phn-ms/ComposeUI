@@ -184,7 +184,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
 
     private void SafeRemoveFromPrivateChannelsDictionary(PrivateChannel privateChannel)
     {
-        lock ( _privateChannelsDictionaryLock)
+        lock (_privateChannelsDictionaryLock)
         {
             if (_privateChannelsByInstanceId.TryGetValue(privateChannel.InstanceId, out var privateChannels))
             {
@@ -347,33 +347,42 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
 
         try
         {
-            var intentResolution = await GetIntentResolutionResult(request).WaitAsync(_options.IntentResultTimeout);
-
-            if (intentResolution == null)
+            var intentResolutionTask = GetIntentResolutionResult(request);
+            if (await Task.WhenAny(intentResolutionTask, Task.Delay(_options.IntentResultTimeout)) == intentResolutionTask)
             {
-                return GetIntentResultResponse.Failure(ResolveError.ResolverUnavailable);
-            }
+                var intentResolution = await intentResolutionTask; // Completed in time
+                                                                   // Use intentResolution as needed
 
-            if (intentResolution.ResultError != null)
+                if (intentResolution == null)
+                {
+                    return GetIntentResultResponse.Failure(ResolveError.ResolverUnavailable);
+                }
+
+                if (intentResolution.ResultError != null)
+                {
+                    return GetIntentResultResponse.Failure(intentResolution.ResultError);
+                }
+
+                if (!intentResolution.IsResolved
+                    && ((_raisedIntentResolutions.TryGetValue(
+                             new Guid(request.TargetAppIdentifier.InstanceId!),
+                             out var handler)
+                            && !handler.IsIntentListenerRegistered(request.Intent))
+                        || intentResolution.ResultError == null))
+                {
+                    return GetIntentResultResponse.Failure(ResolveError.IntentDeliveryFailed);
+                }
+
+                return GetIntentResultResponse.Success(
+                    intentResolution!.ResultChannelId,
+                    intentResolution!.ResultChannelType,
+                    intentResolution!.ResultContext,
+                    intentResolution!.ResultVoid);
+            }
+            else
             {
-                return GetIntentResultResponse.Failure(intentResolution.ResultError);
+                throw new TimeoutException("Intent resolution timed out.");
             }
-
-            if (!intentResolution.IsResolved
-                && ((_raisedIntentResolutions.TryGetValue(
-                         new Guid(request.TargetAppIdentifier.InstanceId!),
-                         out var handler)
-                        && !handler.IsIntentListenerRegistered(request.Intent))
-                    || intentResolution.ResultError == null))
-            {
-                return GetIntentResultResponse.Failure(ResolveError.IntentDeliveryFailed);
-            }
-
-            return GetIntentResultResponse.Success(
-                intentResolution!.ResultChannelId,
-                intentResolution!.ResultChannelType,
-                intentResolution!.ResultContext,
-                intentResolution!.ResultVoid);
         }
         catch (TimeoutException)
         {
@@ -387,7 +396,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
         {
             if (request == null)
             {
-                return ValueTask.FromResult(StoreIntentResultResponse.Failure(ResolveError.IntentDeliveryFailed));
+                return new ValueTask<StoreIntentResultResponse>(StoreIntentResultResponse.Failure(ResolveError.IntentDeliveryFailed));
             }
 
             _raisedIntentResolutions.AddOrUpdate(
@@ -402,12 +411,12 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                     voidResult: request.VoidResult,
                     error: request.Error));
 
-            return ValueTask.FromResult(StoreIntentResultResponse.Success());
+            return new ValueTask<StoreIntentResultResponse>(StoreIntentResultResponse.Success());
         }
         catch (Exception exception)
         {
             _logger.LogError(exception, $"Exception was thrown while executing {nameof(StoreIntentResult)} call.");
-            return ValueTask.FromResult(StoreIntentResultResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
+            return new ValueTask<StoreIntentResultResponse>(StoreIntentResultResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
         }
     }
 
@@ -415,7 +424,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
     {
         if (request == null)
         {
-            return ValueTask.FromResult(IntentListenerResponse.Failure(Fdc3DesktopAgentErrors.PayloadNull));
+            return new ValueTask<IntentListenerResponse>(IntentListenerResponse.Failure(Fdc3DesktopAgentErrors.PayloadNull));
         }
 
         switch (request.State)
@@ -424,7 +433,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                 if (_raisedIntentResolutions.TryGetValue(new(request.Fdc3InstanceId), out var resolver))
                 {
                     resolver.AddIntentListener(request.Intent);
-                    return ValueTask.FromResult(IntentListenerResponse.SubscribeSuccess());
+                    return new ValueTask<IntentListenerResponse>(IntentListenerResponse.SubscribeSuccess());
                 }
 
                 var createdResolver = _raisedIntentResolutions.GetOrAdd(
@@ -433,21 +442,21 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
 
                 createdResolver.AddIntentListener(request.Intent);
 
-                return ValueTask.FromResult(IntentListenerResponse.SubscribeSuccess());
+                return new ValueTask<IntentListenerResponse>(IntentListenerResponse.SubscribeSuccess());
 
             case SubscribeState.Unsubscribe:
 
                 if (_raisedIntentResolutions.TryGetValue(new(request.Fdc3InstanceId), out var resolverToRemove))
                 {
                     resolverToRemove.RemoveIntentListener(request.Intent);
-                    return ValueTask.FromResult(IntentListenerResponse.UnsubscribeSuccess());
+                    return new ValueTask<IntentListenerResponse>(IntentListenerResponse.UnsubscribeSuccess());
                 }
 
                 //Fall into the default case if the resolver is not found
                 break;
         }
 
-        return ValueTask.FromResult(IntentListenerResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
+        return new ValueTask<IntentListenerResponse>(IntentListenerResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
     }
 
     public async ValueTask<GetUserChannelsResponse> GetUserChannels(GetUserChannelsRequest? request)
@@ -603,12 +612,12 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
     {
         if (request == null)
         {
-            return ValueTask.FromResult<AddContextListenerResponse?>(AddContextListenerResponse.Failure(Fdc3DesktopAgentErrors.PayloadNull));
+            return new ValueTask<AddContextListenerResponse?>(AddContextListenerResponse.Failure(Fdc3DesktopAgentErrors.PayloadNull));
         }
 
         if (!Guid.TryParse(request.Fdc3InstanceId, out var originFdc3InstanceId) || !_runningModules.TryGetValue(originFdc3InstanceId, out _))
         {
-            return ValueTask.FromResult<AddContextListenerResponse?>(AddContextListenerResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
+            return new ValueTask<AddContextListenerResponse?>(AddContextListenerResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
         }
 
         lock (_contextListenerLock)
@@ -628,8 +637,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                 _contextListeners[originFdc3InstanceId] = contextListeners;
             }
 
-
-            return ValueTask.FromResult<AddContextListenerResponse?>(AddContextListenerResponse.Added(contextListener.Id.ToString()));
+            return new ValueTask<AddContextListenerResponse?>(AddContextListenerResponse.Added(contextListener.Id.ToString()));
         }
     }
 
@@ -637,7 +645,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
     {
         if (request == null)
         {
-            return ValueTask.FromResult<RemoveContextListenerResponse?>(RemoveContextListenerResponse.Failure(Fdc3DesktopAgentErrors.PayloadNull));
+            return new ValueTask<RemoveContextListenerResponse?>(RemoveContextListenerResponse.Failure(Fdc3DesktopAgentErrors.PayloadNull));
         }
 
         lock (_contextListenerLock)
@@ -648,13 +656,13 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                 || request.ListenerId == null
                 || !Guid.TryParse(request.ListenerId, out var listenerId))
             {
-                return ValueTask.FromResult<RemoveContextListenerResponse?>(RemoveContextListenerResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
+                return new ValueTask<RemoveContextListenerResponse?>(RemoveContextListenerResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
             }
 
             var listener = listeners.FirstOrDefault(x => x.Id == listenerId && x.ContextType == request.ContextType);
             if (listener == null)
             {
-                return ValueTask.FromResult<RemoveContextListenerResponse?>(RemoveContextListenerResponse.Failure(Fdc3DesktopAgentErrors.ListenerNotFound));
+                return new ValueTask<RemoveContextListenerResponse?>(RemoveContextListenerResponse.Failure(Fdc3DesktopAgentErrors.ListenerNotFound));
             }
 
             listeners.Remove(listener);
@@ -663,7 +671,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                 _logger.LogDebug("ContextListener has been successfully unsubscribed.");
             }
 
-            return ValueTask.FromResult<RemoveContextListenerResponse?>(RemoveContextListenerResponse.Executed());
+            return new ValueTask<RemoveContextListenerResponse?>(RemoveContextListenerResponse.Executed());
         }
     }
 
@@ -688,7 +696,6 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
             var fdc3App = await _appDirectory.GetApp(request.AppIdentifier.AppId);
             var appMetadata = fdc3App.ToAppMetadata();
             var parameters = new Dictionary<string, string>();
-
 
             if (request.Context != null)
             {
@@ -715,7 +722,16 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
             }
 
             var cancellationToken = new CancellationToken();
-            _ = await GetContextListener(targetInstanceId, contextType!, cancellationToken).WaitAsync(_options.ListenerRegistrationTimeout, cancellationToken);
+            var contextListenerTask = GetContextListener(targetInstanceId, contextType!, cancellationToken);
+            if (await Task.WhenAny(contextListenerTask, Task.Delay(_options.ListenerRegistrationTimeout, cancellationToken)) == contextListenerTask)
+            {
+                // Task completed within timeout
+                _ = await contextListenerTask;
+            }
+            else
+            {
+                throw new TimeoutException("Listener registration timed out.");
+            }
 
             return OpenResponse.Success(new AppIdentifier { AppId = target.AppId, InstanceId = target.InstanceId });
         }
@@ -736,17 +752,17 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
     {
         if (request == null)
         {
-            return ValueTask.FromResult<GetOpenedAppContextResponse?>(GetOpenedAppContextResponse.Failure(Fdc3DesktopAgentErrors.PayloadNull));
+            return new ValueTask<GetOpenedAppContextResponse?>(GetOpenedAppContextResponse.Failure(Fdc3DesktopAgentErrors.PayloadNull));
         }
 
         if (!Guid.TryParse(request.ContextId, out var contextId))
         {
-            return ValueTask.FromResult<GetOpenedAppContextResponse?>(GetOpenedAppContextResponse.Failure(Fdc3DesktopAgentErrors.IdNotParsable));
+            return new ValueTask<GetOpenedAppContextResponse?>(GetOpenedAppContextResponse.Failure(Fdc3DesktopAgentErrors.IdNotParsable));
         }
 
         return !_openedAppContexts.TryRemove(contextId, out var context)
-            ? ValueTask.FromResult<GetOpenedAppContextResponse?>(GetOpenedAppContextResponse.Failure(Fdc3DesktopAgentErrors.OpenedAppContextNotFound))
-            : ValueTask.FromResult<GetOpenedAppContextResponse?>(GetOpenedAppContextResponse.Success(context));
+            ? new ValueTask<GetOpenedAppContextResponse?>(GetOpenedAppContextResponse.Failure(Fdc3DesktopAgentErrors.OpenedAppContextNotFound))
+            : new ValueTask<GetOpenedAppContextResponse?>(GetOpenedAppContextResponse.Success(context));
     }
 
     public async ValueTask<RaiseIntentResult<RaiseIntentResponse>> RaiseIntentForContext(RaiseIntentForContextRequest request, string contextType)
@@ -803,7 +819,6 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
         RaiseIntentSpecification raiseIntentSpecification;
         if (result.Count > 1)
         {
-
             using var resolverUIIntentCancellationSource = new CancellationTokenSource(TimeSpan.FromMinutes(2));
             var resolverUIIntentResponse = await _resolverUI.SendResolverUIIntentRequest(result.Select(x => x.Intent.Name), resolverUIIntentCancellationSource.Token);
 
@@ -895,8 +910,8 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                 Response = RaiseIntentResponse.Failure(ResolveError.IntentDeliveryFailed)
             };
         }
-        
-        if (request.Fdc3InstanceId == null 
+
+        if (request.Fdc3InstanceId == null
             || !Guid.TryParse(request.Fdc3InstanceId, out var fdc3SourceInstanceId)
             || !_runningModules.TryGetValue(fdc3SourceInstanceId, out var sourceApp))
         {
@@ -1036,10 +1051,21 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
             {
                 var raisedIntentMessageId = StoreRaisedIntentForTarget(raiseIntentSpecification);
 
-                var response = await GetRaiseIntentResponse(raiseIntentSpecification, raisedIntentMessageId).WaitAsync(_options.ListenerRegistrationTimeout);
-                if (response != null)
+                var responseTask = GetRaiseIntentResponse(raiseIntentSpecification, raisedIntentMessageId);
+                var completedTask = await Task.WhenAny(responseTask, Task.Delay(_options.ListenerRegistrationTimeout));
+                if (completedTask == responseTask)
                 {
-                    return response;
+                    var response = await responseTask;
+                    if (response != null)
+                    {
+                        return response;
+                    }
+                }
+                else
+                {
+                    // Timeout logic here
+                    // For example:
+                    // throw new TimeoutException("Listener registration timed out.");
                 }
 
                 return new()
@@ -1064,11 +1090,21 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                     };
                 }
 
-                var response = await GetRaiseIntentResponse(raiseIntentSpecification, raisedIntentMessageId).WaitAsync(_options.ListenerRegistrationTimeout);
-
-                if (response != null)
+                var responseTask = GetRaiseIntentResponse(raiseIntentSpecification, raisedIntentMessageId);
+                var completedTask = await Task.WhenAny(responseTask, Task.Delay(_options.ListenerRegistrationTimeout));
+                if (completedTask == responseTask)
                 {
-                    return response;
+                    var response = await responseTask;
+
+                    if (response != null)
+                    {
+                        return response;
+                    }
+                }
+                else
+                {
+                    // Handle timeout, e.g.:
+                    throw new TimeoutException("Listener registration timed out.");
                 }
 
                 return new()
@@ -1307,7 +1343,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                 _logger.LogDebug("Instance id: {InstanceId} cannot be parsed to {Type}.", appIdentifier.InstanceId, typeof(Guid));
             }
 
-            return ValueTask.FromResult<GetInfoResponse>(GetInfoResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
+            return new ValueTask<GetInfoResponse>(GetInfoResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
         }
 
         if (!_runningModules.TryGetValue(instanceId, out var app))
@@ -1317,7 +1353,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                 _logger.LogDebug("Instance id: {InstanceId} is missing from the tracked modules of {DesktopAgentProvider}.", instanceId, Constants.DesktopAgentProvider);
             }
 
-            return ValueTask.FromResult<GetInfoResponse>(GetInfoResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
+            return new ValueTask<GetInfoResponse>(GetInfoResponse.Failure(Fdc3DesktopAgentErrors.MissingId));
         }
 
         var implementationMetadata = new ImplementationMetadata
@@ -1333,7 +1369,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
             ProviderVersion = Constants.ComposeUIVersion ?? "0.0.0"
         };
 
-        return ValueTask.FromResult<GetInfoResponse>(GetInfoResponse.Success(implementationMetadata));
+        return new ValueTask<GetInfoResponse>(GetInfoResponse.Success(implementationMetadata));
     }
 
     private async Task<ContextListener> GetContextListener(Guid instanceId, string contextType, CancellationToken cancellationToken = default)
@@ -1470,7 +1506,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
 
     public async ValueTask CloseModule(string instanceId, CancellationToken cancellationToken = default)
     {
-        var privateChannels = _privateChannelsByInstanceId.GetValueOrDefault(instanceId);
+        _privateChannelsByInstanceId.TryGetValue(instanceId, out var privateChannels);
 
         if (privateChannels != null)
         {
