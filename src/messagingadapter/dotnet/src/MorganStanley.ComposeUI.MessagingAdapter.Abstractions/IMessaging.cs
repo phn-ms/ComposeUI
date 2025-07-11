@@ -32,7 +32,7 @@ public interface IMessaging
     /// Clients don't need to call this method before calling other methods on this type.
     /// The client should automatically establish a connection when needed.
     /// </remarks>
-    ValueTask ConnectAsync(CancellationToken cancellationToken = default);
+    public ValueTask ConnectAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
     ///     Invokes a named service.
@@ -42,7 +42,7 @@ public interface IMessaging
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    ValueTask<string?> InvokeAsync(string endpoint, string? payload = null, InvokeOptions? options = default, CancellationToken cancellationToken = default);
+    public ValueTask<string?> InvokeAsync(string endpoint, string? payload = null, InvokeOptions? options = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Publishes a message to a topic.
@@ -52,7 +52,7 @@ public interface IMessaging
     /// <param name="options"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    ValueTask PublishAsync(string topic, string? message = null, PublishOptions options = default, CancellationToken cancellationToken = default);
+    public ValueTask PublishAsync(string topic, string? message = null, PublishOptions options = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Registers a service by providing a name and handler.
@@ -61,7 +61,7 @@ public interface IMessaging
     /// <param name="subscriber"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    ValueTask RegisterServiceAsync(string endpoint, Func<string, string, MessageAdapterContext?, ValueTask<string>> subscriber, CancellationToken cancellationToken = default);
+    public ValueTask RegisterServiceAsync(string endpoint, Func<string, string, MessageAdapterContext?, ValueTask<string>> subscriber, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets an observable that represents a topic.
@@ -70,7 +70,7 @@ public interface IMessaging
     /// <param name="subscriber"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    ValueTask<IAsyncDisposable> SubscribeAsync(string topic, Func<string, ValueTask> subscriber, CancellationToken cancellationToken = default);
+    public ValueTask<IAsyncDisposable> SubscribeAsync(string topic, Func<string, ValueTask> subscriber, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes a service registration.
@@ -78,5 +78,5 @@ public interface IMessaging
     /// <param name="endpoint"></param>
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
-    ValueTask UnregisterServiceAsync(string endpoint, CancellationToken cancellationToken = default);
+    public ValueTask UnregisterServiceAsync(string endpoint, CancellationToken cancellationToken = default);
 }

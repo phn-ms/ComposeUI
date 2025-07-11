@@ -93,9 +93,9 @@ public class UserChannelErrorsAndDiagnosticsTests
         VerifyDebugAndWarning();
     }
 
-    private string EmptyBuffer => string.Empty;
-    private string PlainTextBuffer => "Plain Text Payload";
-    private string InvalidJsonBuffer => "{\"randomField\":\"random text\"}";
+    private static string EmptyBuffer => string.Empty;
+    private static string PlainTextBuffer => "Plain Text Payload";
+    private static string InvalidJsonBuffer => "{\"randomField\":\"random text\"}";
 
     private void VerifyDebugAndWarning()
     {

@@ -52,7 +52,7 @@ public class MessageRouterDiagnosticObserver : IDisposable, IObserver<KeyValuePa
     ///         </item>
     ///         <item>
     ///             <description>
-    ///                 for <see cref="IMessageRouter.InvokeAsync" />, the response has arrived and the task was completed.
+    ///                 for <see cref="IMessagingService.InvokeAsync" />, the response has arrived and the task was completed.
     ///             </description>
     ///         </item>
     ///     </list>

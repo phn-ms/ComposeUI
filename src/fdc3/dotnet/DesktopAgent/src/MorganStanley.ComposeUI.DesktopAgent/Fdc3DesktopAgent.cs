@@ -47,7 +47,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
     private readonly ConcurrentDictionary<string, UserChannel> _userChannels = new();
     private readonly ConcurrentDictionary<string, PrivateChannel> _privateChannels = new();
     private readonly ConcurrentDictionary<string, AppChannel> _appChannels = new();
-    private readonly Dictionary<string, List<PrivateChannel>> _privateChannelsByInstanceId = new();
+    private readonly Dictionary<string, List<PrivateChannel>> _privateChannelsByInstanceId = [];
     private readonly ILoggerFactory _loggerFactory;
     private readonly Fdc3DesktopAgentOptions _options;
     private readonly IAppDirectory _appDirectory;
@@ -90,10 +90,9 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
             return null;
         }
 
-        ChannelItem? channelItem = null;
         var userChannelSet = await _userChannelSetReader.GetUserChannelSet();
 
-        if (!userChannelSet.TryGetValue(channelId, out channelItem) || channelItem == null)
+        if (!userChannelSet.TryGetValue(channelId, out var channelItem) || channelItem == null)
         {
             return null;
         }
@@ -564,7 +563,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
         }
         else
         {
-            return FindInstancesResponse.Success(Enumerable.Empty<AppIdentifier>());
+            return FindInstancesResponse.Success([]);
         }
     }
 
@@ -788,12 +787,9 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
 
         //TODO: Decide if we want to allow apps to raise intent if they are not registering their intents into the Fdc3App.Interop.Intents.Raises collection.
         //Throwing an error currently breaks the Conformance tests
-        if (!sourceApp.CanRaiseIntent(contextType: contextType))
+        if (!sourceApp.CanRaiseIntent(contextType: contextType) && _logger.IsEnabled(LogLevel.Warning))
         {
-            if (_logger.IsEnabled(LogLevel.Warning))
-            {
-                _logger.LogWarning("Source app did not register its raiseable intent(s) for context: {ContextType} in the `raises` section of AppDirectory.", contextType);
-            }
+            _logger.LogWarning("Source app did not register its raiseable intent(s) for context: {ContextType} in the `raises` section of AppDirectory.", contextType);
         }
 
         var findIntentsByContextResult = await FindIntentsByContext(new FindIntentsByContextRequest() { Context = request.Context, Fdc3InstanceId = request.Fdc3InstanceId }, contextType);
@@ -924,12 +920,9 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
 
         //TODO: Decide if we want to allow apps to raise intent if they are not registering their intents into the Fdc3App.Interop.Intents.Raises collection
         //Throwing an error currently breaks the Conformance tests
-        if (!sourceApp.CanRaiseIntent(request.Intent, contextType))
+        if (!sourceApp.CanRaiseIntent(request.Intent, contextType) && _logger.IsEnabled(LogLevel.Warning))
         {
-            if (_logger.IsEnabled(LogLevel.Warning))
-            {
-                _logger.LogWarning($"Source app did not register its raiseable intent(s) for context: {contextType} in the `raises` section of AppDirectory.");
-            }
+            _logger.LogWarning("Source app did not register its raiseable intent(s) for context: {ContextType} in the `raises` section of AppDirectory.", contextType);
         }
 
         var intentQueryResult = await GetAppIntentsByRequest(request.Intent, contextType, targetAppIdentifier: request.TargetAppIdentifier);
@@ -990,7 +983,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
         };
     }
 
-    private IEnumerable<AppIntent> FilterAppIntentsByAppId(IEnumerable<AppIntent> source, AppIdentifier appId)
+    private static IEnumerable<AppIntent> FilterAppIntentsByAppId(IEnumerable<AppIntent> source, AppIdentifier appId)
     {
         // Semantically we know this is not null or empty
         foreach (var intent in source)
@@ -1037,7 +1030,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                 {
                     Response = RaiseIntentResponse.Success(messageId, raiseIntentSpecification.Intent, raiseIntentSpecification.TargetAppMetadata),
                     RaiseIntentResolutionMessages = resolution == null
-                        ? Enumerable.Empty<RaiseIntentResolutionMessage>()
+                        ? []
                         : [resolution]
                 };
             }
@@ -1122,7 +1115,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
 
     private async ValueTask<AppMetadata> StartModule(AppMetadata targetAppMetadata, IEnumerable<KeyValuePair<string, string>>? additionalStartupParameters = null)
     {
-        var startupParameters = additionalStartupParameters?.ToDictionary(x => x.Key, y => y.Value) ?? new Dictionary<string, string>();
+        var startupParameters = additionalStartupParameters?.ToDictionary(x => x.Key, y => y.Value) ?? [];
 
         var fdc3InstanceId = Guid.NewGuid().ToString();
         startupParameters.Add(Fdc3StartupParameters.Fdc3InstanceId, fdc3InstanceId);
@@ -1247,7 +1240,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
     {
         var result = new IntentQueryResult();
 
-        Guid instanceId = Guid.Empty;
+        var instanceId = Guid.Empty;
         if (targetAppIdentifier?.InstanceId == null)
         {
             try
@@ -1299,7 +1292,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
     private Dictionary<string, AppIntent> GetAppIntentsFromIntentMetadataCollection(
         IEnumerable<FlatAppIntent> intentMetadataCollection)
     {
-        Dictionary<string, AppIntent> appIntents = new Dictionary<string, AppIntent>();
+        Dictionary<string, AppIntent> appIntents = [];
 
         foreach (var intentMetadata in intentMetadataCollection)
         {
@@ -1311,7 +1304,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                 {
                     Intent = new Protocol.IntentMetadata
                     { Name = intentMetadata.Intent.Name, DisplayName = intentMetadata.Intent.DisplayName },
-                    Apps = Enumerable.Empty<AppMetadata>()
+                    Apps = []
                 };
 
                 appIntents.Add(intentMetadata.Intent.Name, appIntent);
@@ -1460,7 +1453,7 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
             _ => fdc3App);
     }
 
-    private bool IsFdc3StartedModule(IModuleInstance instance, out string? instanceId)
+    private static bool IsFdc3StartedModule(IModuleInstance instance, out string? instanceId)
     {
         instanceId = string.Empty;
         var fdc3InstanceId = instance.StartRequest.Parameters.FirstOrDefault(parameter => parameter.Key == Fdc3StartupParameters.Fdc3InstanceId);
