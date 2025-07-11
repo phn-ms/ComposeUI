@@ -44,7 +44,7 @@ public class EndToEndTests : IAsyncLifetime
 
     private int _counter;
     private IHost _host;
-    private IComposeUIMessaging _messageRouter;
+    private IMessaging _messageRouter;
     private IModuleLoader _moduleLoader;
     private JsonSerializerOptions _options;
     private IDisposable _runningAppsObserver;
@@ -109,7 +109,7 @@ public class EndToEndTests : IAsyncLifetime
             .AddComposeUIMessagingAdapter()
             .BuildServiceProvider();
 
-        _messageRouter = _clientServices.GetRequiredService<IComposeUIMessaging>();
+        _messageRouter = _clientServices.GetRequiredService<IMessaging>();
 
         _moduleLoader = _host.Services.GetRequiredService<IModuleLoader>();
 

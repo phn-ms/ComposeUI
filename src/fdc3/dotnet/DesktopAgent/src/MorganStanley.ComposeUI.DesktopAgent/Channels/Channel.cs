@@ -24,7 +24,7 @@ namespace MorganStanley.ComposeUI.Fdc3.DesktopAgent.Channels
     internal abstract class Channel : IAsyncDisposable
     {
         public string Id { get; }
-        protected IComposeUIMessaging MessagingService { get; }
+        protected IMessaging MessagingService { get; }
         protected abstract string ChannelTypeName { get; }
         private readonly ILogger _logger;
         private readonly ChannelTopics _topics;
@@ -34,7 +34,7 @@ namespace MorganStanley.ComposeUI.Fdc3.DesktopAgent.Channels
         private IAsyncDisposable? _broadcastSubscription;
         private bool _disposed = false;
 
-        protected Channel(string id, IComposeUIMessaging messagingService, ILogger logger, ChannelTopics topics)
+        protected Channel(string id, IMessaging messagingService, ILogger logger, ChannelTopics topics)
         {
             Id = id;
             MessagingService = messagingService;

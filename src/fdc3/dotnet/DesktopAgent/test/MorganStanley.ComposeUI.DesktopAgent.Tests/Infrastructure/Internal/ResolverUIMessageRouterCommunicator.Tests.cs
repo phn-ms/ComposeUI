@@ -32,7 +32,7 @@ public class ResolverUIMessageRouterCommunicatorTests
     [Fact]
     public async Task SendResolverUIRequest_will_return_null()
     {
-        var messageRouterMock = new Mock<IComposeUIMessaging>();
+        var messageRouterMock = new Mock<IMessaging>();
         messageRouterMock.Setup(
                 _ => _.InvokeAsync(
                     It.IsAny<string>(),
@@ -51,7 +51,7 @@ public class ResolverUIMessageRouterCommunicatorTests
     [Fact]
     public async Task SendResolverUIRequest_will_return_response()
     {
-        var messageRouterMock = new Mock<IComposeUIMessaging>();
+        var messageRouterMock = new Mock<IMessaging>();
         messageRouterMock.Setup(
                 _ => _.InvokeAsync(
                     It.IsAny<string>(),

@@ -48,7 +48,7 @@ public partial class Fdc3DesktopAgentMessageRouterServiceTests : IAsyncLifetime
         });
 
     private readonly Fdc3DesktopAgentMessageRouterService _fdc3;
-    private readonly Mock<IComposeUIMessaging> _mockMessageRouter = new();
+    private readonly Mock<IMessaging> _mockMessageRouter = new();
     private readonly Mock<IResolverUICommunicator> _mockResolverUICommunicator = new();
     private readonly MockModuleLoader _mockModuleLoader = new();
     private readonly ConcurrentDictionary<Guid, IModuleInstance> _modules = new();

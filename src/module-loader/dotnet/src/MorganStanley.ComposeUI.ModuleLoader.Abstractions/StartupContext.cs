@@ -32,7 +32,7 @@ public sealed class StartupContext
         if (value == null)
         {
             throw new ArgumentNullException(nameof(value));
-        }
+        }   
 
         lock (_lock)
         {

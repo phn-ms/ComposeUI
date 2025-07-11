@@ -32,7 +32,7 @@ namespace MorganStanley.ComposeUI.Fdc3.DesktopAgent.Infrastructure.Internal;
 
 internal class Fdc3DesktopAgentMessageRouterService : IHostedService
 {
-    private readonly IComposeUIMessaging _messageRouter;
+    private readonly IMessaging _messageRouter;
     private readonly IFdc3DesktopAgentBridge _desktopAgent;
     private readonly Fdc3DesktopAgentOptions _options;
     private readonly ILoggerFactory _loggerFactory;
@@ -58,7 +58,7 @@ internal class Fdc3DesktopAgentMessageRouterService : IHostedService
     public JsonSerializerOptions JsonMessageSerializerOptions => new(_jsonSerializerOptions);
 
     public Fdc3DesktopAgentMessageRouterService(
-        IComposeUIMessaging messageRouter,
+        IMessaging messageRouter,
         IFdc3DesktopAgentBridge desktopAgent,
         IOptions<Fdc3DesktopAgentOptions> options,
         ILoggerFactory? loggerFactory = null)

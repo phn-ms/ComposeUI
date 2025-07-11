@@ -53,7 +53,7 @@ public class UserChannelErrorsAndDiagnosticsTests
     public UserChannelErrorsAndDiagnosticsTests()
     {
         _logger = new TestLogger();
-        _channel = new UserChannel(TestChannel, new Mock<IComposeUIMessaging>().Object, _logger);
+        _channel = new UserChannel(TestChannel, new Mock<IMessaging>().Object, _logger);
     }
 
     [Fact]

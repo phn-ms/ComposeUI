@@ -294,9 +294,15 @@ public class MessageRouterDiagnosticObserver : IDisposable, IObserver<KeyValuePa
 
     private sealed record RegisteredRequest(object Sender, Message Message);
 
-    private sealed class Expectation(Predicate<MessageRouterEvent> predicate, string description)
+    private sealed class Expectation
     {
-        public Predicate<MessageRouterEvent> Predicate { get; } = predicate;
-        public string Description { get; } = description;
+        public Predicate<MessageRouterEvent> Predicate { get; }
+        public string Description { get; }
+
+        public Expectation(Predicate<MessageRouterEvent> predicate, string description)
+        {
+            Predicate = predicate;
+            Description = description;
+        }
     }
 }

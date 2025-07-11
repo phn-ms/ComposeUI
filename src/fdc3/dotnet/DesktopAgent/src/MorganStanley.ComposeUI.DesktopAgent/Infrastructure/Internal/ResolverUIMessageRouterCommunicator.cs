@@ -25,7 +25,7 @@ namespace MorganStanley.ComposeUI.Fdc3.DesktopAgent.Infrastructure.Internal;
 internal class ResolverUIMessageRouterCommunicator : IResolverUICommunicator
 {
     private readonly ILogger<ResolverUIMessageRouterCommunicator> _logger;
-    private readonly IComposeUIMessaging _messageRouter;
+    private readonly IMessaging _messageRouter;
     private readonly TimeSpan _defaultTimeout = TimeSpan.FromMinutes(2);
 
     private readonly JsonSerializerOptions _jsonSerializerOptions = new()
@@ -34,7 +34,7 @@ internal class ResolverUIMessageRouterCommunicator : IResolverUICommunicator
     };
 
     public ResolverUIMessageRouterCommunicator(
-        IComposeUIMessaging messageRouter,
+        IMessaging messageRouter,
         ILogger<ResolverUIMessageRouterCommunicator>? logger = null)
     {
         _messageRouter = messageRouter;

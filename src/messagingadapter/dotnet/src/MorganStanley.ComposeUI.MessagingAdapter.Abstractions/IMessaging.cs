@@ -13,13 +13,15 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-//using Microsoft.Bcl.AsyncInterfaces;
 
 namespace MorganStanley.ComposeUI.MessagingAdapter.Abstractions;
 
-public interface IComposeUIMessaging
+public interface IMessaging
 {
-    string? ClientId { get; }
+    /// <summary>
+    /// Gets the unique identifier of the messaging client instance.
+    /// </summary>
+    public string? ClientId { get; }
 
     /// <summary>
     /// Asynchronously connects to the Message Router server endpoint.
@@ -77,16 +79,4 @@ public interface IComposeUIMessaging
     /// <param name="cancellationToken"></param>
     /// <returns></returns>
     ValueTask UnregisterServiceAsync(string endpoint, CancellationToken cancellationToken = default);
-}
-
-public class InvokeOptions
-{
-    public string? CorrelationId { get; init; }
-}
-
-public record struct PublishOptions
-{
-    public string? CorrelationId { get; init; }
-
-    // TODO: Wait for delivery
 }

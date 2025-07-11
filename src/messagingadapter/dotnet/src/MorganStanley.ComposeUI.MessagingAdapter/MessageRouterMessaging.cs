@@ -17,17 +17,26 @@ using MorganStanley.ComposeUI.MessagingAdapter.Abstractions;
 namespace MorganStanley.ComposeUI.MessagingAdapter;
 
 /// <summary>
-/// Provides an implementation of <see cref="IComposeUIMessaging"/> that wraps an <see cref="IMessagingService"/> instance,
+/// Provides an implementation of <see cref="IMessaging"/> that wraps an <see cref="IMessagingService"/> instance,
 /// offering methods for connecting, invoking, publishing, subscribing, and service registration with consistent exception handling.
 /// </summary>
 /// <remarks>
-/// This class adapts the lower-level <see cref="IMessagingService"/> interface to the <see cref="IComposeUIMessaging"/> abstraction,
+/// This class adapts the lower-level <see cref="IMessagingService"/> interface to the <see cref="IMessaging"/> abstraction,
 /// and ensures that exceptions from the message router are wrapped in adapter-specific exceptions.
 /// </remarks>
-    public class ComposeUIMessaging(IMessagingService messagingService) : IComposeUIMessaging
+public class MessageRouterMessaging : IMessaging
 {
     public string? ClientId { get; set; }
-    private readonly IMessagingService _messagingService = messagingService;
+    private readonly IMessagingService _messagingService;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MessageRouterMessaging"/> class with the specified messaging service.
+    /// </summary>
+    /// <param name="messagingService">The underlying <see cref="IMessagingService"/> to be wrapped by this adapter.</param>
+    public MessageRouterMessaging(IMessagingService messagingService)
+    {
+        _messagingService = messagingService;
+    }
 
     /// <summary>
     /// Connects to the messaging service.
@@ -126,27 +135,10 @@ namespace MorganStanley.ComposeUI.MessagingAdapter;
                 return subscriber(message);
             });
             var asyncDisposable = await _messagingService.SubscribeAsync(topic, asyncSubscriber, cancellationToken);
-            //return new AsyncDisposableWrapper(asyncDisposable);
+
             return asyncDisposable;
         });
     }
-
-    ///// <summary>
-    ///// Wraps an <see cref="IAsyncDisposable"/> instance and exposes it as a synchronous <see cref="IDisposable"/>.
-    ///// Ensures that asynchronous disposal is performed synchronously when <see cref="Dispose"/> is called.
-    ///// </summary>
-    //private sealed class AsyncDisposableWrapper(IAsyncDisposable asyncDisposable) : IDisposable
-    //{
-    //    private readonly IAsyncDisposable _asyncDisposable = asyncDisposable;
-
-    //    /// <summary>
-    //    /// Disposes the underlying <see cref="IAsyncDisposable"/> instance synchronously.
-    //    /// </summary>
-    //    public void Dispose()
-    //    {
-    //        _asyncDisposable.DisposeAsync().AsTask().GetAwaiter().GetResult();
-    //    }
-    //}
 
     /// <summary>
     /// Unregisters a previously registered service endpoint from the messaging service.

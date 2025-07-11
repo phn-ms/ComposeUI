@@ -1061,12 +1061,6 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                         return response;
                     }
                 }
-                else
-                {
-                    // Timeout logic here
-                    // For example:
-                    // throw new TimeoutException("Listener registration timed out.");
-                }
 
                 return new()
                 {
@@ -1100,11 +1094,6 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
                     {
                         return response;
                     }
-                }
-                else
-                {
-                    // Handle timeout, e.g.:
-                    throw new TimeoutException("Listener registration timed out.");
                 }
 
                 return new()
@@ -1506,13 +1495,11 @@ internal class Fdc3DesktopAgent : IFdc3DesktopAgentBridge
 
     public async ValueTask CloseModule(string instanceId, CancellationToken cancellationToken = default)
     {
-        _privateChannelsByInstanceId.TryGetValue(instanceId, out var privateChannels);
-
-        if (privateChannels != null)
+        if (_privateChannelsByInstanceId.TryGetValue(instanceId, out var privateChannels) && privateChannels != null)
         {
             foreach (var channel in privateChannels)
             {
-                await channel.Close(cancellationToken);
+                await channel.Close(cancellationToken).ConfigureAwait(false);
             }
         }
     }
