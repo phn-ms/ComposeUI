@@ -148,7 +148,7 @@ namespace MorganStanley.ComposeUI.Fdc3.DesktopAgent.Channels
         {
             if (_logger.IsEnabled(LogLevel.Debug))
             {
-                _logger.LogDebug("{ChannelTypeName} {Id} connected to MessageRouter with client id {ClientId}", ChannelTypeName, Id, MessagingService.ClientId);
+                _logger.LogDebug("{ChannelTypeName} {Id} connected to the messaging service with id {ClientId}", ChannelTypeName, Id, MessagingService.ClientId);
             }
         }
 
